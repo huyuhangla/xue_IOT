@@ -1,12 +1,20 @@
 package org.xue.xue_iot.Controller;
 
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.xue.xue_iot.Service.UserService;
 import org.xue.xue_iot.pojo.Result;
 import org.xue.xue_iot.pojo.User;
+import org.xue.xue_iot.utils.JWTutil;
+import org.xue.xue_iot.utils.MD5Util;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 public class UserController {
@@ -26,6 +34,7 @@ public class UserController {
             if(password.length() < 6){
                 return Result.fail("密码长度不能小于6位");
             }
+            password = MD5Util.md5(password);
             userService.register(username,password,email);
             return Result.success();
         }
@@ -39,10 +48,21 @@ public class UserController {
         User u = findByUsername(username);//判断用户是否存在
         if(u != null) {
             //userService.login(username, password);
-            if(password.equals(u.getPassword())) {
-                return Result.success();
+            if(MD5Util.md5(password).equals(u.getPassword())) {
+                Map<String,Object> claim = new HashMap<>();
+                claim.put("username", u.getUsername());
+                claim.put("email", u.getEmail());
+                String token = JWTutil.getToken(claim);
+                return Result.success(token);
             }
         }
         return Result.fail("用户名或密码错误");
+    }
+
+    @GetMapping("/user/getall")
+    public Result getAllInformation(HttpServletRequest request){
+        String token = request.getHeader("Authorization");
+        User u = findByUsername(JWTutil.parseToken(token).get("username").toString());
+        return Result.success(u);
     }
 }
