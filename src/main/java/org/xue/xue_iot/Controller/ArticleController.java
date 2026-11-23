@@ -1,31 +1,33 @@
 package org.xue.xue_iot.Controller;
 
-import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+import org.xue.xue_iot.Service.ArticleService;
+import org.xue.xue_iot.pojo.ArticleRequest;
 import org.xue.xue_iot.pojo.Result;
 import org.xue.xue_iot.utils.JWTutil;
 
-import java.util.Map;
-
 @RestController
-@RequestMapping("/article")
+@RequestMapping("/api/v1/articles")
 public class ArticleController {
-    /**身份校验中间件**
 
-            * 除注册/登录/健康检查外，所有接口均需验证 token 有效性
-   * Token 过期时间设置为 7 天*/
+    @Autowired
+    private ArticleService articleService;
 
-   /*   * `0`：成功
-  * `40001`：参数校验失败
-  * `40100`：未登录/Token 无效
-  * `40300`：无权限操作
-  * `40400`：资源不存在
-  * `50000`：服务器内部错误*/
-    @GetMapping("/getall")
-    public Result<String> GetAllArticle() {
-        return Result.success("获取文章列表成功");
+    @PostMapping
+    public Result createArticle(@RequestBody ArticleRequest request, HttpServletRequest httpRequest) {
+        String token = httpRequest.getHeader("Authorization");
+        String username = JWTutil.parseToken(token).get("username").toString();
+
+        if (request.getTitle() == null || request.getTitle().trim().isEmpty()) {
+            return Result.fail("标题不能为空");
+        }
+        if (request.getContent() == null || request.getContent().trim().isEmpty()) {
+            return Result.fail("正文内容不能为空");
+        }
+
+        articleService.createArticle(request, username);
+        return Result.success();
     }
 }
